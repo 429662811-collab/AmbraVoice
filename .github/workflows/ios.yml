@@ -45,6 +45,15 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER=""
 
+      - name: Ad-hoc sign the app (so the IPA has a signature structure)
+        # 为什么加：不加这一步，打出来的 IPA 里一个签名结构都没有，
+        # Sideloadly 会直接判 `Invalid file`（2026-09-26 第一轮真机实测）。
+        # `--sign -` 是 ad-hoc 签名；Sideloadly 之后会用他自己的证书重签一遍。
+        run: |
+          APP=$(find build/App.xcarchive/Products/Applications -maxdepth 1 -name "*.app" | head -1)
+          echo "signing: $APP"
+          codesign --force --sign - --timestamp=none "$APP" || true
+          codesign -dv "$APP" 2>&1 | head -20 || true
       - name: Package IPA
         run: |
           mkdir -p build/Payload
