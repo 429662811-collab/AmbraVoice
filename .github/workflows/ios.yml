@@ -1,0 +1,53 @@
+name: Build iOS (unsigned IPA)
+
+# 为什么这样：家里没有 Mac ⇒ 编译放 GitHub 的 macOS runner（云上），签名的 IPA 用 SideStore/AltStore 在手机上签。
+# ⛔ 这一步**不签名**（unsigned）—— 只证明"云端能编出可安装的壳"。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-14          # Apple Silicon + Xcode 16
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Archive (unsigned)
+        run: |
+          xcodebuild archive \
+            -project AmbraVoice.xcodeproj \
+            -scheme AmbraVoice \
+            -archivePath build/App.xcarchive \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+
+      - name: Package IPA
+        run: |
+          mkdir -p build/Payload
+          cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
+          cd build
+          zip -r AmbraVoice-unsigned.ipa Payload
+          ls -la
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-ipa
+          path: build/AmbraVoice-unsigned.ipa
+          retention-days: 14

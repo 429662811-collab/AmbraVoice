@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Xcode / 构建产物（XcodeGen 生成的东西不进仓）
+build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/
+AmbraVoice.xcodeproj/
+Payload/
+
+# 本机笔记
+_notes/
